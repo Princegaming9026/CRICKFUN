@@ -113,7 +113,23 @@ const MovieCard = ({ movie }: { movie: Movie, key?: any }) => {
   );
 };
 
-const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
+const VideoPlayer = ({ url, title, autoLandscape = false }: { url: string, title: string, autoLandscape?: boolean }) => {
+  // Auto landscape on mount if mobile
+  React.useEffect(() => {
+    if (autoLandscape && isMobile && screen.orientation && !document.fullscreenElement) {
+      const lock = async () => {
+        try {
+          await screen.orientation.lock('landscape');
+          if (containerRef.current) {
+            await containerRef.current.requestFullscreen();
+          }
+        } catch (e) {
+          console.log('Auto landscape failed:', e);
+        }
+      };
+      lock();
+    }
+  }, [autoLandscape, isMobile]);
   const videoRef = React.useRef<HTMLVideoElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -653,9 +669,9 @@ const MovieDetails = () => {
   return (
     <div className="min-h-screen bg-black text-white pb-12">
       <div className="relative aspect-[2/3] md:aspect-video bg-gray-900">
-        {isPlaying ? (
-          <VideoPlayer url={movie.watch_link} title={movie.title} />
-        ) : (
+{isPlaying ? (
+  <VideoPlayer url={movie.watch_link} title={movie.title} autoLandscape={true} />
+) : (
           <>
             <img 
               src={movie.poster_url} 
