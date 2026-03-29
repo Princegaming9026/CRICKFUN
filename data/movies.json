@@ -1,0 +1,42 @@
+[
+  { 
+    "id": 1, 
+    "categoryId": 1, 
+    "title": "CSK vs MI - Live IPL Stream", 
+    "poster_url": "https://picsum.photos/seed/cskmi/300/450", 
+    "description": "Live IPL 2026 final - powerful NS Player like streaming with auto landscape.", 
+    "rating": "5.0", 
+    "year": "2026", 
+    "watch_link": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+  },
+  { 
+    "id": 2, 
+    "categoryId": 1, 
+    "title": "RCB vs KKR - Live Match", 
+    "poster_url": "https://picsum.photos/seed/rcbkkr/300/450", 
+    "description": "High quality HLS stream test - auto landscape on Watch Now.", 
+    "rating": "4.8", 
+    "year": "2026", 
+    "watch_link": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
+  },
+  { 
+    "id": 3, 
+    "categoryId": 2, 
+    "title": "Big Buck Bunny MP4 Test", 
+    "poster_url": "https://picsum.photos/seed/bigbuck/300/450", 
+    "description": "Progressive MP4 - works with any player.", 
+    "rating": "4.5", 
+    "year": "2024", 
+    "watch_link": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+  },
+  { 
+    "id": 4, 
+    "categoryId": 3, 
+    "title": "Tears of Steel DASH", 
+    "poster_url": "https://picsum.photos/seed/tears/300/450", 
+    "description": "DASH stream test for advanced player.", 
+    "rating": "4.7", 
+    "year": "2024", 
+    "watch_link": "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd"
+  }
+]
