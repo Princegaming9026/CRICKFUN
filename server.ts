@@ -205,6 +205,25 @@ app.delete("/api/admin/categories/:id", authenticateAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// Stream Proxy - CORS bypass for any streaming link (NS Player like)
+app.use('/api/proxy', (req, res, next) => {
+  const targetUrl = req.query.url as string;
+  if (!targetUrl) return res.status(400).json({ error: 'Missing url query param' });
+  req.url = new URL(targetUrl).pathname + req.url.slice(10);
+  req.headers.host = new URL(targetUrl).host;
+  next();
+}, express.raw({ type: '*/*' }), (req, res) => {
+  const targetUrl = req.query.url as string;
+  fetch(targetUrl + req.url.slice(1), {
+    method: req.method,
+    headers: req.headers as any,
+    body: req.body
+  }).then(r => {
+    res.set(r.headers as any);
+    r.body.pipe(res);
+  }).catch(err => res.status(500).json({ error: 'Proxy failed' }));
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
