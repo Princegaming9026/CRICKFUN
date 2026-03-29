@@ -1,11 +1,18 @@
-# Render Deployment Fix - TODO
+# Backend Fix for Login
 
-## Steps:
-- [x] 1. Edit package.json: Add "start": "vite preview" script.
-- [ ] 2. Test locally: `npm run build &amp;&amp; npm start`
-- [ ] 3. Git commit &amp; push to Test branch: `git add . &amp;&amp; git commit -m "Fix Render deploy: add start script" &amp;&amp; git push`
-- [ ] 4. Check Render dashboard for successful deploy.
-- [ ] 5. Update TODO.md: Mark complete and delete if done.
+**Login connection failed** because frontend API calls need server.ts running.
 
-Current status: Step 1 complete (package.json updated). Step 2: Local test requires `npx vite build && npx vite preview` on Windows. Git push next for Render.
+**Updated:**
+- package.json: "build": "tsc && vite build", "start": "tsx dist/server.js", tsx in deps.
+- tsconfig.json: compile server.ts to dist/.
+- vite.config.ts: already fixed host/port.
 
+**GitHub दोनों files update करें & push Test.**
+
+**Render Dashboard:**
+- Environment var add: `GEMINI_API_KEY` = your key.
+- Service type "Web Service".
+
+**Admin login:** key = "BERLIN786"
+
+Now fullstack deploys! Login काम करेगा।
