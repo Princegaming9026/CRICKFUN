@@ -113,8 +113,16 @@ const MovieCard = ({ movie }: { movie: Movie, key?: any }) => {
   );
 };
 
-const VideoPlayer = ({ url, title, autoLandscape = false }: { url: string, title: string, autoLandscape?: boolean }) => {
-  // Auto landscape on mount if mobile
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = React.useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    setIsMobile(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
   React.useEffect(() => {
     if (autoLandscape && isMobile && screen.orientation && !document.fullscreenElement) {
       const lock = async () => {
@@ -122,20 +130,15 @@ const VideoPlayer = ({ url, title, autoLandscape = false }: { url: string, title
           await screen.orientation.lock('landscape');
           if (containerRef.current) {
             await containerRef.current.requestFullscreen();
-          }
+  const [progress, setProgress] = useState(0);
         } catch (e) {
-          console.log('Auto landscape failed:', e);
-        }
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
       };
       lock();
     }
   }, [autoLandscape, isMobile]);
   const videoRef = React.useRef<HTMLVideoElement>(null);
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -270,30 +273,11 @@ const VideoPlayer = ({ url, title, autoLandscape = false }: { url: string, title
     // Mobile auto-mute for autoplay policy
     if (isMobile) video.muted = true;
 
-    if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(url);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(e => console.log('Autoplay failed:', e));
-      });
-      return () => {
-        hls.destroy();
-        video.removeEventListener('timeupdate', handleTimeUpdate);
-        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-        video.removeEventListener('play', handlePlay);
-        video.removeEventListener('pause', handlePause);
-        video.removeEventListener('waiting', handleWaiting);
-        video.removeEventListener('playing', handlePlaying);
-        document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        screen.orientation?.removeEventListener('change', handleOrientationChange);
-      };
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url;
-      video.addEventListener('loadedmetadata', () => {
-        video.play().catch(e => console.log('Autoplay failed:', e));
-      });
-    }
+    video.src = `/api/proxy?url=${encodeURIComponent(url)}`;
+    video.load();
+    video.addEventListener('loadedmetadata', () => {
+      video.play().catch(e => console.log('Autoplay failed:', e));
+    });
 
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
@@ -317,7 +301,6 @@ const VideoPlayer = ({ url, title, autoLandscape = false }: { url: string, title
       <video 
         ref={videoRef} 
         playsInline
-        muted={isMobile}
         className="w-full h-full object-contain"
         onClick={handleVideoInteraction}
         onTouchStart={handleVideoInteraction}
