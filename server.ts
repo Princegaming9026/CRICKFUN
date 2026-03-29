@@ -180,6 +180,16 @@ app.delete("/api/admin/movies/:id", authenticateAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+app.put("/api/admin/movies/:id", authenticateAdmin, (req, res) => {
+  let movies = readData("movies");
+  const id = parseInt(req.params.id);
+  const index = movies.findIndex(m => m.id === id);
+  if (index === -1) return res.status(404).json({ error: "Movie not found" });
+  movies[index] = { ...movies[index], ...req.body };
+  writeData("movies", movies);
+  res.json({ success: true, movie: movies[index] });
+});
+
 app.post("/api/admin/categories", authenticateAdmin, (req, res) => {
   const categories = readData("categories");
   const newCat = { ...req.body, id: Date.now() };
