@@ -26,9 +26,12 @@ import {
   Settings,
   Plus,
   Trash2,
+  Edit3,
+  Check,
   Lock,
   ArrowLeft,
-  Activity
+  Activity,
+  Edit3 as Edit
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import Hls from 'hls.js';
@@ -122,7 +125,17 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(false);
+  const [orientationLocked, setOrientationLocked] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const controlsTimeout = React.useRef<NodeJS.Timeout | null>(null);
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(pointer: coarse)');
+    setIsMobile(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
 
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
@@ -132,9 +145,13 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
 
   const togglePlay = () => {
     if (videoRef.current) {
-      if (isPlaying) videoRef.current.pause();
-      else videoRef.current.play();
+      if (isPlaying) {
+        videoRef.current.pause();
+      } else {
+        videoRef.current.play().catch(console.error);
+      }
       setIsPlaying(!isPlaying);
+      if ('vibrate' in navigator && isMobile) navigator.vibrate(50);
     }
   };
 
@@ -153,14 +170,26 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
     }
   };
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = async () => {
     if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+    try {
+      if (!document.fullscreenElement) {
+        if (screen.orientation && screen.orientation.lock) {
+          await screen.orientation.lock('landscape');
+          setOrientationLocked(true);
+        }
+        await containerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+      } else {
+        if (screen.orientation && orientationLocked) {
+          screen.orientation.unlock();
+          setOrientationLocked(false);
+        }
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (err) {
+      console.warn('Fullscreen/Orientation lock failed:', err);
     }
   };
 
@@ -170,13 +199,24 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
     }
   };
 
-  const handleMouseMove = () => {
+  const handleInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setShowControls(true);
     if (controlsTimeout.current) clearTimeout(controlsTimeout.current);
     controlsTimeout.current = setTimeout(() => {
       if (isPlaying) setShowControls(false);
     }, 3000);
+    if ('vibrate' in navigator && isMobile) navigator.vibrate(20);
   };
+
+  const handleVideoInteraction = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    togglePlay();
+  };
+
+  const handleMouseMove = handleInteraction;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -184,7 +224,7 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
 
     const handleTimeUpdate = () => {
       setCurrentTime(video.currentTime);
-      setProgress((video.currentTime / video.duration) * 100);
+      setProgress((video.currentTime / video.duration) * 100 || 0);
     };
 
     const handleLoadedMetadata = () => {
@@ -195,6 +235,12 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
     const handlePause = () => setIsPlaying(false);
     const handleWaiting = () => setIsBuffering(true);
     const handlePlaying = () => setIsBuffering(false);
+    const handleFullscreenChange = () => setIsFullscreen(!!document.fullscreenElement);
+    const handleOrientationChange = () => {
+      if (screen.orientation) {
+        setOrientationLocked(screen.orientation.type.includes('landscape'));
+      }
+    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -202,13 +248,18 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
     video.addEventListener('pause', handlePause);
     video.addEventListener('waiting', handleWaiting);
     video.addEventListener('playing', handlePlaying);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    screen.orientation?.addEventListener('change', handleOrientationChange);
+
+    // Mobile auto-mute for autoplay policy
+    if (isMobile) video.muted = true;
 
     if (Hls.isSupported()) {
       const hls = new Hls();
       hls.loadSource(url);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(e => console.log("Auto-play blocked", e));
+        video.play().catch(e => console.log('Autoplay failed:', e));
       });
       return () => {
         hls.destroy();
@@ -218,11 +269,13 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
         video.removeEventListener('pause', handlePause);
         video.removeEventListener('waiting', handleWaiting);
         video.removeEventListener('playing', handlePlaying);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        screen.orientation?.removeEventListener('change', handleOrientationChange);
       };
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = url;
       video.addEventListener('loadedmetadata', () => {
-        video.play().catch(e => console.log("Auto-play blocked", e));
+        video.play().catch(e => console.log('Autoplay failed:', e));
       });
     }
 
@@ -233,26 +286,31 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
       video.removeEventListener('pause', handlePause);
       video.removeEventListener('waiting', handleWaiting);
       video.removeEventListener('playing', handlePlaying);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      screen.orientation?.removeEventListener('change', handleOrientationChange);
     };
-  }, [url]);
+  }, [url, isMobile]);
 
   return (
     <div 
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      className="w-full aspect-video bg-black relative group overflow-hidden select-none"
+      onTouchMove={handleInteraction}
+      className="w-full aspect-video bg-black relative group overflow-hidden select-none touch-target"
     >
       <video 
         ref={videoRef} 
         playsInline
+        muted={isMobile}
         className="w-full h-full object-contain"
-        onClick={togglePlay}
+        onClick={handleVideoInteraction}
+        onTouchStart={handleVideoInteraction}
       />
 
       {/* Buffering Indicator */}
       {isBuffering && (
-        <div className="absolute inset-0 flex items-center justify-center z-20">
-          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center z-20 bg-black/50">
+          <div className="w-16 h-16 border-4 border-yellow-400/80 border-t-yellow-400 rounded-full animate-spin-sharp player-sharp shadow-2xl" />
         </div>
       )}
 
@@ -280,41 +338,42 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
 
             {/* Center Controls */}
             <div className="flex items-center justify-center gap-12">
-              <button onClick={() => skip(-10)} className="text-white/70 hover:text-white transition-transform active:scale-90">
-                <RotateCcw size={32} />
+              <button onClick={() => skip(-10)} onTouchStart={(e) => { e.preventDefault(); skip(-10); }} className="text-white/70 hover:text-white p-3 rounded-full bg-black/30 backdrop-blur player-sharp touch-target transition-transform active:scale-90 hover:bg-white/20">
+                <RotateCcw size={36} strokeWidth={2.5} className="player-sharp" />
               </button>
               <button 
                 onClick={togglePlay}
-                className="w-16 h-16 rounded-full bg-yellow-400 flex items-center justify-center text-black shadow-2xl transition-transform active:scale-90"
+                onTouchStart={(e) => { e.preventDefault(); togglePlay(); }}
+                className="w-20 h-20 touch-target rounded-full bg-yellow-400/90 backdrop-blur flex items-center justify-center text-black font-bold shadow-2xl ring-4 ring-yellow-400/50 player-sharp transition-all active:scale-90 hover:shadow-yellow-500/50 hover:bg-yellow-400"
               >
                 {isPlaying ? <Pause fill="currentColor" size={32} /> : <Play fill="currentColor" className="ml-1" size={32} />}
               </button>
-              <button onClick={() => skip(10)} className="text-white/70 hover:text-white transition-transform active:scale-90">
-                <RotateCw size={32} />
+              <button onClick={() => skip(10)} onTouchStart={(e) => { e.preventDefault(); skip(10); }} className="text-white/70 hover:text-white p-3 rounded-full bg-black/30 backdrop-blur player-sharp touch-target transition-transform active:scale-90 hover:bg-white/20">
+                <RotateCw size={36} strokeWidth={2.5} className="player-sharp" />
               </button>
             </div>
 
             {/* Bottom Bar */}
             <div className="bg-gradient-to-t from-black/80 to-transparent p-4 space-y-2">
               {/* Progress Bar */}
-              <div className="relative group/progress h-1.5 flex items-center cursor-pointer">
-                <input 
-                  type="range"
-                  min="0"
-                  max={duration || 0}
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
-                <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-yellow-400 rounded-full relative"
-                    style={{ width: `${progress}%` }}
-                  >
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg scale-0 group-hover/progress:scale-100 transition-transform" />
+                <div className="relative group/progress h-2 flex items-center cursor-pointer touch-target">
+                  <input 
+                    type="range"
+                    min="0"
+                    max={duration || 0}
+                    value={currentTime}
+                    onChange={handleSeek}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden sharp-thumb">
+                    <div 
+                      className="h-full bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full relative player-sharp"
+                      style={{ width: `${progress}%` }}
+                    >
+                      <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 bg-yellow-400 sharp-thumb scale-75 group-hover/progress:scale-100 transition-all shadow-lg z-20" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
@@ -322,14 +381,14 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </div>
                   <div className="flex items-center gap-3">
-                    <button onClick={toggleMute} className="text-white/70 hover:text-white">
-                      {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                    <button onClick={toggleMute} onTouchStart={(e) => { e.preventDefault(); toggleMute(); }} className="text-white/70 hover:text-white p-2 rounded-full bg-black/30 backdrop-blur player-sharp touch-target">
+                      {isMuted || volume === 0 ? <VolumeX size={20} strokeWidth={2} className="player-sharp" /> : <Volume2 size={20} strokeWidth={2} className="player-sharp" />}
                     </button>
                     <input 
                       type="range"
                       min="0"
                       max="1"
-                      step="0.1"
+                      step="0.05"
                       value={isMuted ? 0 : volume}
                       onChange={(e) => {
                         const v = parseFloat(e.target.value);
@@ -337,13 +396,13 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
                         if (videoRef.current) videoRef.current.volume = v;
                         setIsMuted(v === 0);
                       }}
-                      className="w-16 h-1 bg-white/20 rounded-full accent-yellow-400 cursor-pointer"
+                      className="w-20 h-2 bg-white/20 rounded-full accent-yellow-400 cursor-pointer sharp-thumb player-sharp"
                     />
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <button onClick={toggleFullscreen} className="text-white/70 hover:text-white">
-                    {isFullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
+                  <button onClick={toggleFullscreen} onTouchStart={(e) => { e.preventDefault(); toggleFullscreen(); }} className="text-white/70 hover:text-white p-2 rounded-full bg-black/30 backdrop-blur player-sharp touch-target">
+                    {isFullscreen ? <Minimize size={22} strokeWidth={2} className="player-sharp" /> : <Maximize size={22} strokeWidth={2} className="player-sharp" />}
                   </button>
                 </div>
               </div>
