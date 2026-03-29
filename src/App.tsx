@@ -332,7 +332,7 @@ const VideoPlayer = ({ url, title }: { url: string, title: string }) => {
                 <h3 className="text-sm font-bold truncate max-w-[200px]">{title}</h3>
               </div>
               <div className="flex items-center gap-4">
-                <Settings size={18} className="text-white/70 hover:text-white cursor-pointer" />
+  <Settings size={18} className="text-white/70 hover:text-white cursor-pointer player-sharp touch-target" onClick={() => { /* Quality modal */ }} />
               </div>
             </div>
 
@@ -724,6 +724,8 @@ const AdminPanel = ({ onLogout }: { onLogout: () => void }) => {
     watch_link: ''
   });
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingMovie, setEditingMovie] = useState<Movie | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -742,18 +744,59 @@ const AdminPanel = ({ onLogout }: { onLogout: () => void }) => {
     }
   };
 
-  const handleAddMovie = async (e: React.FormEvent) => {
+const handleAddMovie = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/movies', {
-      method: 'POST',
+    if (editingId) {
+      handleUpdateMovie(e);
+    } else {
+      const res = await fetch('/api/admin/movies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMovie)
+      });
+      if (res.ok) {
+        const added = await res.json();
+        setMovies([...movies, added]);
+        setNewMovie({ title: '', categoryId: 0, poster_url: '', description: '', rating: '', year: '', watch_link: '' });
+      }
+    }
+  };
+
+  const handleUpdateMovie = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId || !editingMovie) return;
+    const res = await fetch(`/api/admin/movies/${editingId}`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMovie)
     });
     if (res.ok) {
-      const added = await res.json();
-      setMovies([...movies, added]);
+      const updated = await res.json();
+      setMovies(movies.map(m => m.id === editingId ? updated.movie : m));
+      setEditingId(null);
+      setEditingMovie(null);
       setNewMovie({ title: '', categoryId: 0, poster_url: '', description: '', rating: '', year: '', watch_link: '' });
     }
+  };
+
+  const handleEditMovie = (movie: Movie) => {
+    setEditingId(movie.id);
+    setEditingMovie(movie);
+    setNewMovie({
+      title: movie.title,
+      categoryId: movie.categoryId,
+      poster_url: movie.poster_url,
+      description: movie.description,
+      rating: movie.rating,
+      year: movie.year,
+      watch_link: movie.watch_link
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditingMovie(null);
+    setNewMovie({ title: '', categoryId: 0, poster_url: '', description: '', rating: '', year: '', watch_link: '' });
   };
 
   const handleDelete = async (id: number) => {
@@ -785,11 +828,26 @@ const AdminPanel = ({ onLogout }: { onLogout: () => void }) => {
       </div>
 
       <div className="space-y-8">
-        {/* Add Movie Form */}
+        {/* Add/Edit Movie Form */}
         <section className="bg-white/5 rounded-3xl p-6 border border-white/10">
           <h2 className="text-lg font-black mb-6 flex items-center gap-2">
-            <Plus size={20} className="text-yellow-400" /> ADD NEW CONTENT
+            {editingId ? (
+              <>
+                <Edit3 size={20} className="text-yellow-400" /> EDIT CONTENT
+              </>
+            ) : (
+              <>
+                <Plus size={20} className="text-yellow-400" /> ADD NEW CONTENT
+              </>
+            )}
           </h2>
+          <div className="mb-4">
+            {editingMovie && (
+              <div className="text-xs text-yellow-400 font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                Editing: <span className="truncate">{editingMovie.title}</span>
+              </div>
+            )}
+          </div>
           <form onSubmit={handleAddMovie} className="space-y-4">
             <input 
               type="text" placeholder="Title" required
@@ -831,8 +889,13 @@ const AdminPanel = ({ onLogout }: { onLogout: () => void }) => {
               value={newMovie.watch_link} onChange={e => setNewMovie({...newMovie, watch_link: e.target.value})}
             />
             <button type="submit" className="w-full bg-yellow-400 text-black font-black py-4 rounded-xl shadow-lg active:scale-95 transition">
-              PUBLISH NOW
+              {editingId ? 'UPDATE MOVIE' : 'PUBLISH NOW'}
             </button>
+            {editingId && (
+              <button type="button" onClick={handleCancelEdit} className="w-full bg-gray-700 text-white font-bold py-4 rounded-xl hover:bg-gray-600 transition">
+                CANCEL EDIT
+              </button>
+            )}
           </form>
         </section>
 
@@ -898,9 +961,14 @@ const AdminPanel = ({ onLogout }: { onLogout: () => void }) => {
                     <button onClick={() => setIsDeleting(null)} className="bg-white/10 text-white text-[10px] font-black px-3 py-1 rounded-lg">NO</button>
                   </div>
                 ) : (
-                  <button onClick={() => setIsDeleting(m.id)} className="text-red-500 p-2 hover:bg-red-500/10 rounded-lg transition">
-                    <Trash2 size={18} />
-                  </button>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEditMovie(m)} className="text-yellow-400 p-2 hover:bg-yellow-400/10 rounded-lg transition">
+                      <Edit3 size={18} />
+                    </button>
+                    <button onClick={() => setIsDeleting(m.id)} className="text-red-500 p-2 hover:bg-red-500/10 rounded-lg transition">
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
