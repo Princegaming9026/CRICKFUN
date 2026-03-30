@@ -1,42 +1,52 @@
-[
-  { 
-    "id": 1, 
-    "categoryId": 1, 
-    "title": "CSK vs MI - Live IPL Stream", 
-    "poster_url": "https://picsum.photos/seed/cskmi/300/450", 
-    "description": "Live IPL 2026 final - powerful NS Player like streaming with auto landscape.", 
-    "rating": "5.0", 
-    "year": "2026", 
-    "watch_link": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
-  },
-  { 
-    "id": 2, 
-    "categoryId": 1, 
-    "title": "RCB vs KKR - Live Match", 
-    "poster_url": "https://picsum.photos/seed/rcbkkr/300/450", 
-    "description": "High quality HLS stream test - auto landscape on Watch Now.", 
-    "rating": "4.8", 
-    "year": "2026", 
-    "watch_link": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
-  },
-  { 
-    "id": 3, 
-    "categoryId": 2, 
-    "title": "Big Buck Bunny MP4 Test", 
-    "poster_url": "https://picsum.photos/seed/bigbuck/300/450", 
-    "description": "Progressive MP4 - works with any player.", 
-    "rating": "4.5", 
-    "year": "2024", 
-    "watch_link": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-  },
-  { 
-    "id": 4, 
-    "categoryId": 3, 
-    "title": "Tears of Steel DASH", 
-    "poster_url": "https://picsum.photos/seed/tears/300/450", 
-    "description": "DASH stream test for advanced player.", 
-    "rating": "4.7", 
-    "year": "2024", 
-    "watch_link": "https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd"
-  }
-]
+{
+  "categories": [
+    {
+      "name": "Live Cricket",
+      "icon": "🏏",
+      "movies": [
+        {
+          "title": "IND vs AUS Live - 1st Test",
+          "poster": "https://via.placeholder.com/300x450/059669/ffffff?text=IND+vs+AUS",
+          "stream": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        },
+        {
+          "title": "ENG vs NZ Live - ODI",
+          "poster": "https://via.placeholder.com/300x450/065f46/ffffff?text=ENG+vs+NZ",
+          "stream": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
+        },
+        {
+          "title": "IPL 2025 Live Stream",
+          "poster": "https://via.placeholder.com/300x450/10b981/000000?text=IPL+2025",
+          "stream": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    },
+    {
+      "name": "Movies",
+      "icon": "🎥",
+      "movies": [
+        {
+          "title": "Big Buck Bunny",
+          "poster": "https://via.placeholder.com/300x450/8b5cf6/ffffff?text=Big+Bunny",
+          "stream": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        },
+        {
+          "title": "Sintel",
+          "poster": "https://via.placeholder.com/300x450/ec4899/ffffff?text=Sintel",
+          "stream": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8"
+        }
+      ]
+    },
+    {
+      "name": "Series",
+      "icon": "📺",
+      "movies": [
+        {
+          "title": "Episode 1",
+          "poster": "https://via.placeholder.com/300x450/f43f5e/ffffff?text=Series+Ep1",
+          "stream": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+        }
+      ]
+    }
+  ]
+}
